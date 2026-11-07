@@ -5,7 +5,8 @@ and rdriscoll/Crestron-CIP (MIT), CommandFusion/CIP and akellai/scip2cip (no lic
 Crestron code and no code copied from any of them.
 Used live against a real control processor: registration, digital / analog / serial joins and smart-object joins.
 Smart-object ids are 4 bytes (ids above 255 worked live). Since that test: text without the Unicode flag is decoded
-with the encoding= option, and the end-of-sync answer and multi-line old serials are covered by tests only. Session.raw_log keeps the first frames received (hex).
+with the encoding= option (checked when the Session is made), and the end-of-sync answer and multi-line old serials
+(\r, \r\n or \n between values) are covered by tests only. Session.raw_log keeps the first frames received (hex).
 
 Frame: [type 1][length 2, big-endian][payload]. Data frames (0x05) hold sub-packets [len 1][type 1][body] after a
 2-byte handle; extended frames (0x12) hold [len 2][type 1][body]. Joins are 1-based here, 0-based on the wire.
@@ -21,6 +22,8 @@ Frame: [type 1][length 2, big-endian][payload]. Data frames (0x05) hold sub-pack
     smart object         sub 38 / ext sub 39 [object id, 4 bytes big-endian][the sub-packets above]
     login (4-Series)     0B 00 LL 00 00 'user:password' 00 00 00 -> 0C ..level (0 = refused)
 """
+import codecs
+import re
 import socket
 import ssl
 import time
@@ -133,6 +136,18 @@ def serial(join, text, so=None):
     return frames
 
 
+def text_codec(encoding):
+    """Check an encoding= name: it must be a text code page that keeps ASCII as ASCII (latin-1, cp1256, utf-8 ...).
+    Names like 'hex', 'base64' or 'utf-16' would garble every message, so they raise ValueError at once."""
+    try:
+        name = codecs.lookup(encoding or "latin-1").name
+        if "#1,".encode(name) == b"#1," and b"#1,".decode(name) == "#1,":
+            return name
+    except (LookupError, TypeError, ValueError, UnicodeError):
+        pass
+    raise ValueError("encoding %r is not an ASCII-compatible text code page" % (encoding,))
+
+
 class Decoder:
     """Bytes in -> events out: ('d'|'a'|'s', so or 0, join, value) | ('registered',) | ('refused', why) |
     ('login', level) | ('program', status) | ('heartbeat',) | ('disconnect',) | ('synced',)."""
@@ -140,7 +155,7 @@ class Decoder:
     def __init__(self, encoding="latin-1"):
         self.buf = bytearray()
         self.serials = {}
-        self.encoding = encoding or "latin-1"
+        self.encoding = text_codec(encoding)
 
     def text(self, raw):
         """Text without the Unicode flag, decoded with the session's encoding (default latin-1)."""
@@ -204,7 +219,7 @@ class Decoder:
                 if ev:
                     yield ev
             elif t == 0x02:                                      # old ASCII serial: '#<join>,text\r', one or more
-                for txt in self.text(body).split("\r"):
+                for txt in re.split(r"\r\n?|\n", self.text(body)):   # \r, \r\n or \n between them
                     if txt[:1] in "#@" and "," in txt:
                         j, _, v = txt[1:].partition(",")
                         if j.isdigit():
@@ -237,7 +252,7 @@ class Session:
 
     def __init__(self, host, ipid, port=0, user="", password="", timeout=10.0, log=None, encoding="latin-1"):
         self.host, self.ipid, self.port = host, int(ipid), int(port or 0)
-        self.enc = encoding or "latin-1"
+        self.enc = text_codec(encoding)
         self.user, self.password, self.timeout = user or "", password or "", timeout
         self.sock, self.dec = None, Decoder(self.enc)
         self.last_rx = self.last_tx = time.monotonic()

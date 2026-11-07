@@ -5,8 +5,9 @@ on an IP-ID and exchanges digital, analog and serial joins, including smart-obje
 
 > **Status: used live against a real control processor** (registration, digital, analog, serial and smart-object
 > joins, including smart-object ids above 255). The frame formats follow what several open-source CIP projects agree
-> on (see *Sources*). Since that test: non-Unicode text uses the `encoding=` option, and two additions (the
-> end-of-sync answer, several old ASCII serials in one packet) are covered by the tests only.
+> on (see *Sources*). Since that test: non-Unicode text uses the `encoding=` option (checked up front), and two
+> additions (the end-of-sync answer, several old ASCII serials in one packet, with any line ending) are covered by
+> the tests only.
 
 ## Use
 
@@ -34,8 +35,11 @@ while True:
 - Joins are 1-based. A digital press is held, and re-sent, until you release it. Pass `press=False` to set a
   level instead.
 - `Session(..., port=41796)` uses TLS (4-Series). With no port, 41794 is tried first, then 41796.
-- Text without the Unicode flag is decoded with `encoding=` (default `latin-1`). Text with non-ASCII characters is
-  sent as UTF-16LE.
+- Text without the Unicode flag is decoded with `encoding=` (default `latin-1`; e.g. `cp1256` for Arabic). The name
+  is checked when the `Session` is made: an unknown name, or one that does not keep ASCII as ASCII (`utf-16`, `hex`
+  ...), raises `ValueError` instead of breaking the connection later. Text with non-ASCII characters is sent as
+  UTF-16LE.
+- Old-style text packets with several values are split on `\r`, `\r\n` or `\n`.
 - Smart-object ids are sent and read as 4 bytes, big-endian, so ids above 255 work (the public sources read only
   the last byte).
 - `Session.raw_log` keeps the first frames received, in hex, for troubleshooting.

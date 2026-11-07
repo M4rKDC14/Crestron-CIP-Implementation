@@ -75,6 +75,20 @@ class Decoding(unittest.TestCase):
         f = frame(0x05, b"\x00\x00" + bytes([1 + len(body), 0x02]) + body)
         self.assertEqual(cip.Decoder().feed(f), [("s", 0, 1, ""), ("s", 0, 1, "aaa"), ("s", 0, 2, "b")])
 
+    def test_old_ascii_serials_with_crlf_or_lf(self):
+        body = b"#1,aaa\r\n#2,b\n#3,c\r"
+        f = frame(0x05, b"\x00\x00" + bytes([1 + len(body), 0x02]) + body)
+        self.assertEqual(cip.Decoder().feed(f), [("s", 0, 1, "aaa"), ("s", 0, 2, "b"), ("s", 0, 3, "c")])
+
+    def test_encoding_is_checked_up_front(self):
+        self.assertEqual(cip.Decoder("").encoding, "iso8859-1")
+        self.assertEqual(cip.Decoder("windows-1256").encoding, "cp1256")
+        for bad in ("no-such-code-page", "hex", "base64", "utf-16"):
+            with self.assertRaises(ValueError):
+                cip.Decoder(bad)
+            with self.assertRaises(ValueError):
+                cip.Session("127.0.0.1", 0x03, encoding=bad)
+
     def test_encoding_option(self):
         self.assertEqual(cip.Decoder().serial_part(0, 3, 3, "caf\xe9".encode("latin-1")), ("s", 0, 3, "caf\xe9"))
         self.assertEqual(cip.Decoder("cp1256").serial_part(0, 3, 3, "م".encode("cp1256")), ("s", 0, 3, "م"))
