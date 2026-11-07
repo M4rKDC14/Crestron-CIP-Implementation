@@ -3,9 +3,9 @@
 Written from the public protocol notes of open-source CIP clients - klenae/python-cipclient, Antonio112009/pycrestron-cip
 and rdriscoll/Crestron-CIP (MIT), CommandFusion/CIP and akellai/scip2cip (no licence; read, nothing copied) - no
 Crestron code and no code copied from any of them.
-NOT YET PROVEN against a real processor: the formats below are what those sources agree on; smart-object joins and
-the 4-Series login rest on two sources only. The first frames received are kept in Session.raw_log (hex) so they can
-be checked against a real processor.
+Used live against a real control processor: registration, digital / analog / serial joins and smart-object joins.
+Since that test: smart-object ids here are limited to the one-byte field (1-255), text without the Unicode flag is
+decoded with the encoding= option, and the end-of-sync answer and multi-line old serials are covered by tests only. Session.raw_log keeps the first frames received (hex).
 
 Frame: [type 1][length 2, big-endian][payload]. Data frames (0x05) hold sub-packets [len 1][type 1][body] after a
 2-byte handle; extended frames (0x12) hold [len 2][type 1][body]. Joins are 1-based here, 0-based on the wire.

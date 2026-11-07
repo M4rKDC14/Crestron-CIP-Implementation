@@ -1,5 +1,5 @@
 """A stand-in Crestron processor for the tests: speaks CIP as the public notes describe it (crestron_cip docstring).
-NOT qualified against a real processor - it checks the client is consistent with those notes, nothing more.
+It lets the tests run without hardware; it is not a full processor.
 Records every frame the panel sends."""
 import socket
 import threading

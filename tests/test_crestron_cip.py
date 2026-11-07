@@ -1,7 +1,7 @@
 """Tests for crestron_cip: the frame formats, the decoder and a session against a stand-in processor.
 
-These check the client against the public protocol notes it was written from (see the module docstring). They do not
-prove it against a real processor.
+These check the client against the public protocol notes it was written from (see the module docstring), without
+hardware.
 """
 import socket
 import sys

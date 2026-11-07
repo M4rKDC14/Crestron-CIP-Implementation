@@ -3,9 +3,10 @@
 A small Python client for Crestron's CIP protocol. It connects to a control processor as a touch panel (XPanel)
 on an IP-ID and exchanges digital, analog and serial joins, including smart-object joins.
 
-> **Status: not yet proven against a real processor.** The frame formats follow what several open-source CIP
-> projects agree on (see *Sources*). Smart-object joins and the 4-Series login rest on two sources only. The tests
-> check the client against those notes and a stand-in processor, nothing more.
+> **Status: used live against a real control processor** (registration, digital, analog, serial and smart-object
+> joins). The frame formats follow what several open-source CIP projects agree on (see *Sources*). Since that test:
+> smart-object ids are limited to 1-255 here, non-Unicode text uses the `encoding=` option, and two additions (the
+> end-of-sync answer, several old ASCII serials in one packet) are covered by the tests only.
 
 ## Use
 
@@ -36,7 +37,7 @@ while True:
 - Text without the Unicode flag is decoded with `encoding=` (default `latin-1`). Text with non-ASCII characters is
   sent as UTF-16LE.
 - Smart-object ids are 1-255, the one-byte id field the public sources describe.
-- `Session.raw_log` keeps the first frames received, in hex, for checking against a real processor.
+- `Session.raw_log` keeps the first frames received, in hex, for troubleshooting.
 
 ## Protocol summary
 
@@ -49,8 +50,7 @@ heartbeat, digital / analog / serial / smart-object sub-packets, and the 4-Serie
 python -m unittest discover -s tests
 ```
 
-`tests/fake_processor.py` is a stand-in processor written from the same notes. It is not qualified against
-real hardware.
+`tests/fake_processor.py` is a stand-in processor written from the same notes, so the tests run without hardware.
 
 ## Sources
 
