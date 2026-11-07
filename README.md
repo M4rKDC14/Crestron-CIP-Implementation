@@ -4,8 +4,8 @@ A small Python client for Crestron's CIP protocol. It connects to a control proc
 on an IP-ID and exchanges digital, analog and serial joins, including smart-object joins.
 
 > **Status: used live against a real control processor** (registration, digital, analog, serial and smart-object
-> joins). The frame formats follow what several open-source CIP projects agree on (see *Sources*). Since that test:
-> smart-object ids are limited to 1-255 here, non-Unicode text uses the `encoding=` option, and two additions (the
+> joins, including smart-object ids above 255). The frame formats follow what several open-source CIP projects agree
+> on (see *Sources*). Since that test: non-Unicode text uses the `encoding=` option, and two additions (the
 > end-of-sync answer, several old ASCII serials in one packet) are covered by the tests only.
 
 ## Use
@@ -36,7 +36,8 @@ while True:
 - `Session(..., port=41796)` uses TLS (4-Series). With no port, 41794 is tried first, then 41796.
 - Text without the Unicode flag is decoded with `encoding=` (default `latin-1`). Text with non-ASCII characters is
   sent as UTF-16LE.
-- Smart-object ids are 1-255, the one-byte id field the public sources describe.
+- Smart-object ids are sent and read as 4 bytes, big-endian, so ids above 255 work (the public sources read only
+  the last byte).
 - `Session.raw_log` keeps the first frames received, in hex, for troubleshooting.
 
 ## Protocol summary

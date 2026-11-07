@@ -97,7 +97,7 @@ class FakeProcessor:
             if sub[0] != len(sub) - 1:
                 raise AssertionError(f"sub-packet length {sub[0]} for {len(sub) - 1} bytes: {p.hex()}")
             if sub[1] == 0x38:
-                so, sub = sub[5], sub[6:]
+                so, sub = int.from_bytes(sub[2:6], "big"), sub[6:]
             if sub[1] in (0x00, 0x27):
                 j = (sub[2] | ((sub[3] & 0x7F) << 8)) + 1
                 out.append((so, j, 0 if sub[3] & 0x80 else 1, sub[1] == 0x27))

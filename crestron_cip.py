@@ -4,8 +4,8 @@ Written from the public protocol notes of open-source CIP clients - klenae/pytho
 and rdriscoll/Crestron-CIP (MIT), CommandFusion/CIP and akellai/scip2cip (no licence; read, nothing copied) - no
 Crestron code and no code copied from any of them.
 Used live against a real control processor: registration, digital / analog / serial joins and smart-object joins.
-Since that test: smart-object ids here are limited to the one-byte field (1-255), text without the Unicode flag is
-decoded with the encoding= option, and the end-of-sync answer and multi-line old serials are covered by tests only. Session.raw_log keeps the first frames received (hex).
+Smart-object ids are 4 bytes (ids above 255 worked live). Since that test: text without the Unicode flag is decoded
+with the encoding= option, and the end-of-sync answer and multi-line old serials are covered by tests only. Session.raw_log keeps the first frames received (hex).
 
 Frame: [type 1][length 2, big-endian][payload]. Data frames (0x05) hold sub-packets [len 1][type 1][body] after a
 2-byte handle; extended frames (0x12) hold [len 2][type 1][body]. Joins are 1-based here, 0-based on the wire.
@@ -18,7 +18,7 @@ Frame: [type 1][length 2, big-endian][payload]. Data frames (0x05) hold sub-pack
                          [join-1 low][join-1 high 7 bits | 0x80 when low]
     analog               sub 14 [join-1 2][value 2] (old processors: sub 01)
     serial               ext sub 34 / sub 15 [join-1 2][flags: 1 start, 2 end, 4 UTF-16LE][text]
-    smart object         sub 38 / ext sub 39 [00 00 00][object id 1-255][the sub-packets above]
+    smart object         sub 38 / ext sub 39 [object id, 4 bytes big-endian][the sub-packets above]
     login (4-Series)     0B 00 LL 00 00 'user:password' 00 00 00 -> 0C ..level (0 = refused)
 """
 import socket
@@ -107,11 +107,12 @@ def digital(join, value, so=None, press=True):
 
 
 def _so_id(so):
-    """A smart object's id field: three zero bytes and the id (1-255), as the public sources describe it."""
+    """A smart object's id: 4 bytes, big-endian. The public sources read only the last byte (ids up to 255); ids above
+    255 (e.g. 401, 530) work this way on a real processor."""
     so = int(so)
-    if not 1 <= so <= 0xFF:
-        raise ValueError(f"smart object id out of range (1-255): {so}")
-    return b"\x00\x00\x00" + bytes([so])
+    if not 1 <= so <= 0xFFFFFFFF:
+        raise ValueError(f"smart object id out of range: {so}")
+    return so.to_bytes(4, "big")
 
 
 def analog(join, value, so=None):
@@ -211,7 +212,7 @@ class Decoder:
             elif t == 0x03 and body[:1] == b"\x1c":
                 yield ("synced",)
             elif t in (0x38, 0x39) and len(body) >= 4:
-                yield from self.subs(body[4:], wide, body[3])
+                yield from self.subs(body[4:], wide, int.from_bytes(body[0:4], "big"))
 
     def serial_part(self, so, join, flags, data):
         key = (so, join)

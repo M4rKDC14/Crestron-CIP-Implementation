@@ -40,10 +40,13 @@ class Frames(unittest.TestCase):
 
     def test_smart_object_ids(self):
         self.assertEqual(cip.analog(7, 1, so=200).hex(), "05000e00000b38000000c8" "05140006" "0001")
+        self.assertEqual(cip.analog(7, 1, so=530).hex(), "05000e00000b3800000212" "05140006" "0001")   # 4-byte id
         with self.assertRaises(ValueError):
-            cip.analog(7, 1, so=256)                                           # beyond the 1-byte id field
+            cip.analog(7, 1, so=-1)
         d = cip.Decoder()
         self.assertEqual(d.feed(cip.analog(7, 1234, so=200)), [("a", 200, 7, 1234)])
+        self.assertEqual(d.feed(cip.analog(7, 1234, so=530)), [("a", 530, 7, 1234)])     # not 530 & 0xFF = 18
+        self.assertEqual(d.feed(cip.digital(5, True, so=401, press=False)), [("d", 401, 5, 1)])
         self.assertEqual(d.feed(cip.digital(5, True, so=12, press=False)), [("d", 12, 5, 1)])
         self.assertEqual([d.feed(f) for f in cip.serial(3, "hi", so=50)], [[("s", 50, 3, "hi")]])
 
